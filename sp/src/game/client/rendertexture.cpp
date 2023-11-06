@@ -81,6 +81,25 @@ ITexture *GetCameraTexture( void )
 }
 
 //=============================================================================
+// Timeloop Replay Texture
+//=============================================================================
+static CTextureReference s_pTimeloopReplayTextures[MAX_TIMELOOP_REPLAY_TEXTURES];
+ITexture *GetTimeloopReplayTexture(int which)
+{
+	Assert(which < MAX_TIMELOOP_REPLAY_TEXTURES);
+
+	if (!s_pTimeloopReplayTextures[which])
+	{
+		char szName[32];
+		Q_snprintf(szName, sizeof(szName), "_rt_TimeloopReplay%i", which);
+		s_pTimeloopReplayTextures[which].Init(materials->FindTexture(szName, TEXTURE_GROUP_RENDER_TARGET));
+		Assert(!IsErrorTexture(s_pTimeloopReplayTextures[which]));
+		AddReleaseFunc();
+	}
+	return s_pTimeloopReplayTextures[which];
+}
+
+//=============================================================================
 // Full Frame Depth Texture
 //=============================================================================
 static CTextureReference s_pFullFrameDepthTexture;
@@ -255,4 +274,7 @@ void ReleaseRenderTargets( void )
 
 	for (int i=0; i<MAX_FB_TEXTURES; ++i)
 		s_pFullFrameFrameBufferTexture[i].Shutdown();
+
+	for (int i = 0; i<MAX_TIMELOOP_REPLAY_TEXTURES; ++i)
+		s_pTimeloopReplayTextures[i].Shutdown();
 }

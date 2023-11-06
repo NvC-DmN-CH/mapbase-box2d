@@ -446,6 +446,10 @@ private:
 	// baseDrawFlags is a combination of DF_ defines. DF_MONITOR is passed into here while drawing a monitor.
 	void			ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxVisible, const CViewSetup &view, int nClearFlags, view_id_t viewID, bool bDrawViewModel = false, int baseDrawFlags = 0, ViewCustomVisibility_t *pCustomVisibility = NULL );
 
+	void			DrawNextTimeloopFrame( const CViewSetup &view);
+	
+	void			DrawScreenQuad( IMaterial* pMat, int width, int height, float xoffset, float yoffset, float xscale, float yscale, float z );
+
 	void			DrawMonitors( const CViewSetup &cameraView );
 
 	bool			DrawOneMonitor( ITexture *pRenderTarget, int cameraNum, C_PointCamera *pCameraEnt, const CViewSetup &cameraView, C_BasePlayer *localPlayer, 
@@ -518,6 +522,7 @@ private:
 	CMaterialReference	m_TranslucentSingleColor;
 	CMaterialReference	m_ModulateSingleColor;
 	CMaterialReference	m_ScreenOverlayMaterial;
+	CMaterialReference	m_FullframeFramebufferMaterial;
 #ifdef MAPBASE
 	CMaterialReference	m_IndexedScreenOverlayMaterials[MAX_SCREEN_OVERLAYS];
 	bool m_bUsingIndexedScreenOverlays;

@@ -15,6 +15,7 @@ ITexture *GetWaterReflectionTexture( void );
 ITexture *GetWaterRefractionTexture( void );
 ITexture *GetFullscreenTexture( void );
 ITexture *GetCameraTexture( void );
+ITexture *GetTimeloopReplayTexture( int which );
 ITexture *GetFullFrameDepthTexture( void );
 
 // SmallBufferHDRx=r16g16b16a16 quarter-sized texture
@@ -25,6 +26,8 @@ ITexture *GetSmallBuffer0( void );							// quarter-sized texture, same fmt as s
 ITexture *GetSmallBuffer1( void );							// quarter-sized texture, same fmt as screen
 
 #define MAX_TEENY_TEXTURES 3
+#define MAX_TIMELOOP_REPLAY_TEXTURES 32
+#define TIMELOOP_COMPOSITE_SIZE 1024
 
 ITexture *GetTeenyTexture(int which);						// tiny 32x32 texture, always 8888
 

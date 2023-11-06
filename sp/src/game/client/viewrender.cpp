@@ -74,6 +74,9 @@
 #include "c_point_camera.h"
 #endif // USE_MONITORS
 
+
+#include "c_point_timeloop.h"
+
 #ifdef MAPBASE
 #include "mapbase/c_func_fake_worldportal.h"
 #include "colorcorrectionmgr.h"
@@ -197,6 +200,7 @@ IntroData_t *g_pIntroData = NULL;
 static bool	g_bRenderingView = false;			// For debugging...
 static int g_CurrentViewID = VIEW_NONE;
 bool g_bRenderingScreenshot = false;
+
 
 
 #define FREEZECAM_SNAPSHOT_FADE_SPEED 340
@@ -2341,6 +2345,27 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 			m_CurrentView = currentView;
 		}
 
+
+		// Timeloop replay snapshots
+		//C_PointTimeloop *pTimeloopEnt = GetTimeloopEntity();
+		//if (!pTimeloopEnt)
+		//{
+		//	Msg("NULL!!!! \n");
+		//}
+
+		if ( GetTimeloopEntity() )
+		{
+			C_PointTimeloop* timeloop_ent = GetTimeloopEntity();
+
+			if (timeloop_ent->m_isOn)
+			{
+				if ( timeloop_ent->m_Frame != timeloop_ent->m_FramePrevious)
+				{
+					timeloop_ent->m_FramePrevious = timeloop_ent->m_Frame;
+					CViewRender::DrawNextTimeloopFrame( view );
+				}
+			}
+		}
 	}
 
 	if ( mat_viewportupscale.GetBool() && mat_viewportscale.GetFloat() < 1.0f ) 
@@ -3683,6 +3708,119 @@ bool CViewRender::DrawFakeWorldPortal( ITexture *pRenderTarget, C_FuncFakeWorldP
 	return true;
 }
 #endif
+
+
+void CViewRender::DrawNextTimeloopFrame( const CViewSetup &view )
+{
+	C_PointTimeloop *timeloop = GetTimeloopEntity();
+
+	// okaye.. on what area to draw the screen?
+	int rows = TIMELOOP_COMPOSITE_SIZE / timeloop->m_ReplayHeight;
+	int cols = TIMELOOP_COMPOSITE_SIZE / timeloop->m_ReplayWidth;
+	int x = timeloop->m_Frame % cols;
+	int y = Floor2Int(timeloop->m_Frame / cols);
+	
+	float area_x = x / (float)cols;
+	float area_y = y / (float)rows;
+	float area_w = timeloop->m_ReplayWidth / (float)TIMELOOP_COMPOSITE_SIZE;
+	float area_h = timeloop->m_ReplayHeight / (float)TIMELOOP_COMPOSITE_SIZE;
+
+	// from [0,1] to [-1, 1]
+	area_x = (area_x * 2 - 1.0f);
+	area_y = (area_y * 2 - 1.0f);
+	area_w *= 2.0f;
+	area_h *= 2.0f;
+
+	
+	/*
+	Msg("-----------------------\n\n", timeloop->m_isOn);
+	Msg("m_ReplayWidth: %i\n", timeloop->m_ReplayWidth);
+	Msg("m_ReplayHeight: %i\n", timeloop->m_ReplayHeight);
+	Msg("m_Frame: %i\n", timeloop->m_Frame);
+	Msg("m_FramesCount: %i\n", timeloop->m_FramesCount);
+	Msg("m_Page: %i\n", timeloop->m_Page);
+	Msg("m_PagesCount: %i\n", timeloop->m_PagesCount);
+	Msg("m_SnapshotDelay: %f\n", timeloop->m_SnapshotDelay);
+	Msg("m_Duration: %f\n", timeloop->m_Duration);
+	Msg("m_isOn: %i\n", timeloop->m_isOn);
+	Msg("\n");
+	Msg("rows: %i\n", rows);
+	Msg("cols: %i\n", cols);
+	Msg("x: %i\n", x);
+	Msg("y: %i\n", y);
+	Msg("area_x: %f\n", area_x);
+	Msg("area_y: %f\n", area_y);
+	Msg("area_w: %f\n", area_w);
+	Msg("area_h: %f\n", area_h);
+	Msg("\n\n\n");
+	*/
+
+	// draw !
+	Frustum frustum;
+	render->Push3DView(view, 0, GetTimeloopReplayTexture( timeloop->m_Page ), (VPlane *)frustum);
+	CViewRender::DrawScreenQuad(m_FullframeFramebufferMaterial, TIMELOOP_COMPOSITE_SIZE, TIMELOOP_COMPOSITE_SIZE, area_x, area_y, area_w, area_h, 0.5f);
+	render->PopView(frustum);
+}
+
+void CViewRender::DrawScreenQuad(IMaterial* pMat, int width, int height, float xoffset, float yoffset, float xwidth, float yheight, float z)
+{
+	float halfPixelWidth = -0.5f / width;
+	float halfPixelHeight = -0.5f / height;
+
+	halfPixelWidth = 0;
+	halfPixelHeight = 0;
+
+	CMatRenderContextPtr pRenderContext(materials);
+
+	// MUST bind material before building a mesh
+	// this will tell the mesh builder what vertex format the shader wants
+	pRenderContext->Bind(pMat);
+
+	pRenderContext->MatrixMode(MATERIAL_PROJECTION);
+	pRenderContext->PushMatrix();
+	pRenderContext->LoadIdentity();
+
+	pRenderContext->MatrixMode(MATERIAL_VIEW);
+	pRenderContext->PushMatrix();
+	pRenderContext->LoadIdentity();
+	
+	//pRenderContext->OverrideAlphaWriteEnable( true, false );
+	//pRenderContext->OverrideColorWriteEnable( true, false );
+
+	CMeshBuilder meshBuilder;
+	IMesh* pMesh = pRenderContext->GetDynamicMesh(false);
+	meshBuilder.Begin(pMesh, MATERIAL_QUADS, 1);
+
+
+	meshBuilder.Position3f(		xoffset			,	-yoffset,					z);
+	meshBuilder.TexCoord2f(0, 0 + halfPixelWidth, 0 + halfPixelHeight);
+	meshBuilder.AdvanceVertex();
+
+	meshBuilder.Position3f(		xoffset + xwidth,	-yoffset,					z);
+	meshBuilder.TexCoord2f(0, 1 + halfPixelWidth, 0 + halfPixelHeight);
+	meshBuilder.AdvanceVertex();
+
+	meshBuilder.Position3f(		xoffset + xwidth,	-yoffset - yheight,			z);
+	meshBuilder.TexCoord2f(0, 1 + halfPixelWidth, 1 + halfPixelHeight);
+	meshBuilder.AdvanceVertex();
+
+	meshBuilder.Position3f(		xoffset			,	-yoffset - yheight,			z);
+	meshBuilder.TexCoord2f(0, 0 + halfPixelWidth, 1 + halfPixelHeight);
+	meshBuilder.AdvanceVertex();
+
+	meshBuilder.End();
+
+	pMesh->Draw();
+
+
+	pRenderContext->MatrixMode(MATERIAL_PROJECTION);
+	pRenderContext->PopMatrix();
+
+	pRenderContext->MatrixMode(MATERIAL_VIEW);
+	pRenderContext->PopMatrix();
+
+	pRenderContext->OverrideColorWriteEnable(false, false);
+}
 
 void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 {

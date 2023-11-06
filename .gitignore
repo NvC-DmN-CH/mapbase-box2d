@@ -66,6 +66,7 @@ config.cfg
 *.bak
 
 # Build folders
+sp/game/mod_hl2/bin/
 sp/src/.vs/
 sp/src/game/client/Debug_mod_episodic/
 sp/src/game/client/Debug_mod_hl2/
@@ -88,7 +89,6 @@ sp/src/materialsystem/*.dll
 sp/src/materialsystem/*.pdb
 sp/src/vgui2/*.dll
 sp/src/vgui2/*.pdb
-sp/game/mod_hl2\bin
 
 # Build support files
 sp/src/devtools/gcc9+support.o

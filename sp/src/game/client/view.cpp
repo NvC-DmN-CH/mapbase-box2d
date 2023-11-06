@@ -311,6 +311,11 @@ void CViewRender::Init( void )
 	extern CMaterialReference g_material_WriteZ;
 	g_material_WriteZ.Init( "engine/writez", TEXTURE_GROUP_OTHER );
 
+
+	m_FullframeFramebufferMaterial.Init(materials->FindMaterial("engine/fullframefb", TEXTURE_GROUP_VGUI));
+	m_FullframeFramebufferMaterial->IncrementReferenceCount();
+
+
 	// FIXME:  
 	QAngle angles;
 	engine->GetViewAngles( angles );
